@@ -1,0 +1,506 @@
+# InVitro Parameter File
+
+# 2019-07-30-07:21:00 -- minor explanatory note
+# 
+# This is an example of the parameterisation files for InVitro.
+#
+# One of the early decisions I made was to implicitly force the explicit use of units
+# in the parameter files, and to make the documentation of parameter explicit and embedded
+# in the file.  Parameters are accessed heirarchically: We would request the tick length 
+# for constructing a movie-loop of a fish by calling 
+#   
+#   PGetN(PARAM_REQ, taxon, Animal::GetCName(),"breeding", "distribution_exp", (char *)0);
+#
+# Where the parameters requirements may be set with the flags
+#
+# PARAM_OPT				(0x00)	// optional parameter
+# PARAM_REQ				(0x01)	// required parameter
+# PARAM_NOU				(0x02)	// no units
+# PARAM_NOR				(0x04)	// no required reference
+#
+# or the more imposing alternatives
+#
+# OPTIONAL_PARAMETER		PARAM_OPT
+# MANDATORY_PARAMETER		PARAM_REQ
+#
+# Unless explicitly bypassed, both units and references are required for most 
+# parameters.  This feature was carried over in my thesis -- it makes the production
+# of documents (reports, documentation, journal articles, research proposals etc) much
+# less frenetic and provides a trail of breadcrumbs if something is amiss.
+#
+# The explicit inclusion of units means that "unit errors" are also avoided.
+#
+# This also makes the parameterisation of derived entities much easier, since resolution 
+# of parameters is performed by going from the taxonomic leaves up toward the root.
+#
+# Loosely, the first order tags (ones that aren't nested in braces) correspond with the 
+# class being used to represent taxon indicated by the name of the file. This is so we
+# can construct our files from subspecies outward, inheriting the properties of the
+# less specific parameterisations appropriately.  Clearly, parameters from symlinked 
+# files must have less precedence than those closer to the root node.
+
+&inherit fish  # this grafts the parameters from "fish" directly into the tree associated
+               # with "shark" as the basic starting point.  It is an error to &inherit more
+					# than one file
+
+BufPredFish ~shark,Fish  # Makes the BufPredFish representation of
+                         # sharks use the parameters specified in the
+								 # Fish block below ("BufPredFish" becomes an alias for "Fish")
+
+Fish {
+	# If use holling equations and not dynamic hunting could we step
+	# these out to be longer (like a week).
+	short_tick = 1[min]
+	tick = 12[hour]
+	long_tick = 1[day]
+	movie {
+		tick = 10[min]
+		long_tick = 1[hour]
+	}
+	Brain {
+		disable = 1
+	}
+}
+
+Animal {
+	log_ate_failures = 1
+	group {
+		size = 20	(Reference needed here ***)	# 6 probably too few (100 may be too many)
+	#	min = 5	(Reference needed here ***)
+		testing {
+			size = 1000	(Reference needed here ***)
+		}
+	}
+
+	fecundity { 
+		MaxPropMassSpawned = 0.2
+	
+# of individual female at maximum size
+		const {
+			value = 9	(Reference needed here ***)
+			low {
+				value = 2	(Reference needed here ***)
+			}
+			medium {
+				value = 7	(Reference needed here ***)
+			}
+			high {
+				value = 12	(Reference needed here ***)
+			}
+			rate = 0.035[1/kg]	(Reference needed here ***)
+			egg_mort = 1.0	(Reference needed here ***)
+		}
+		variables {
+			expr = "(value-rate*(max_mass-imass))*egg_mort"
+		}
+		fecundity = "(expr<0)?0:expr*n"	(Reference needed here ***)
+	}
+	breeding {
+		#disable = 1
+		age = 67[week]	(Reference needed here ***)
+#		age = 676[week]	(Reference needed here ***) 
+		start = 40[week]	(Reference needed here ***)
+		offset = 0.5	(Reference needed here ***)
+		period = 1[year]	(Reference needed here ***)
+		duration = 9[week]	(Reference needed here ***)
+		fallow_period = 40[week]	(Reference needed here ***)
+		class = "Nursery"
+		noslow {
+			class = "Fish"
+		}
+		mate {
+			# only breed if an agent of the following taxon is within
+			# radius.
+			# Note no class test is performed so this could be either
+			# populations or individuals or anything else in neighbourhood
+			# which matches the taxon.
+			# Need male_shark and female_shark? Is shark ok?
+			taxon = "shark"
+			radius = 800[m]
+		}
+		assess {
+			priority = "1" # breed anywhere
+		}
+	}
+
+	mortality {
+		natural_mortality = 0.095[@ln(1-x)/year]	(Reference needed here ***)	# mortality rate per year 
+	}
+}
+
+ContaminantSink {
+	contaminants {
+		AdministriviumIncapacitate {
+			# concentration in the water ("conc") and interval ("t") are passed into the system on contact
+			# ingested mass ("ate") is passed into the system on ingestion
+			# "imass" is initialised
+			# "current_load" is initialised to the current mass of contaminant associated with the organism
+	
+			#acute_lethal = "50% 60[ug/l] @ 200[hours], 50% 122[ug/l] @ 96[hours]"	(Reference needed here ***)
+			#chronic_lethal = "50% 60[ug/l] @ 400[hours], 50% 122[ug/l] @ 192[hours]"	(Reference needed here ***)
+
+			acute_lethal = "none"	(Testing)
+			chronic_lethal = "none"	(Testing)
+
+			const {
+				#decay_rate = 0.003	(Reference needed here ***)
+				decay_rate = 0.03	(Reference needed here ***)
+				#decay_rate = 0.1	(Reference needed here ***)
+				#decay_rate = 0.3	(Reference needed here ***)
+	
+				resp_filter_rate = 28[ml/(sec*kg)]	(Reference needed here ***)
+				resp_uptake = 0.05	(Reference needed here ***)
+				organic_uptake = 0.95	(Reference needed here ***)
+				stepsize = 1[ug/l]	(Reference needed here ***)
+			}
+
+			variables {
+				parameters {
+					volume = "imass * l/kg"
+				}
+				exposure_rate = "resp_uptake * conc * resp_filter_rate * imass"
+			}
+	
+			load_update = "ate * organic_uptake + volume * ode(dC/dt = exposure_rate  / volume - decay_rate * C(t), C(0) = current_load/volume, t/20, t)"	(Reference needed here ***)
+			reproductive_impairment = "current_load>0?0.9:0.0"	(Reference needed here ***)
+
+			proportionkilled = "..."	(Reference needed here ***)
+			contaminant_tick = 20[min]
+		}
+	}
+}  
+  
+growth {
+	bodyshape = "fusiform"
+
+	implicit_hunting_success = 0.0  # proportion of time that a random hunt of something not modelled succeeds based on 
+	median_predation_dt = 1[day]
+	implicit_prey_mass_scale = 0.25 # (multiplied by stomach_capacity gives the mean for a poisson distribution of the mass of prey :-)
+#	implicit_hunting_success = 0.3  # proportion of time that a random hunt of something not modelled succeeds based on 
+
+	disable_predation {
+#		implicit_hunting_success = 2
+	}
+
+#	mass_mode = "exp minf"
+#	max_age = 65.0[year]	(Reference needed here ***)
+#	linf = 3[m]	(Reference needed here ***)
+#	minf = 100[kg]	(Reference needed here ***)
+#
+#	mass_lambda = 0.01[1/year]	(Reference needed here ***)	# specified for years for eqn [age = -log((M-m)/M)/lambda]
+#	mass0 = 1.0[kg]	(Reference needed here ***)	# mass of individual fish larvae at spawning
+#
+#	age_at_length0 = -4.8[year]	(McAuley et al. (2006))
+#	age_at_mass0 = 0[year]
+#	length0 = 0.5[m] (Reference needed here ***)	# length of individual fish larvae at spawning
+#	length_a = 0.0058[mm->kg]	(www.fishbase.org, FISHBASE version 02/2008)
+#	length_b = 3.31	(www.fishbase.org, FISHBASE version 02/2008)
+#	length_lambda = 0.042[1/year]	(McAuley et al. (2006))	# specified for years for eqn [age = -log((M-m)/M)/lambda]
+#	max_mass = 417[kg] (McAuley et al. (2006) and LW relationship from FISHBASE version 02/2008)
+#
+#	StarvationRate = 0.04[1/week]	(Reference needed here ***) # internally: kg/time per kilo of individual
+#	MaintenanceRate = "0.07 / week"	(Reference needed here ***) # internally: kg/time per kilo of individual
+#	MaxGrowthRate = "20 * kg / week"	(Reference needed here ***)	# internally: kg/time
+#	AssimEfficiency = "0.44"	(Reference needed here ***)     # kg/kg
+#	AssimEfficiency = "0.33"	(consistent with shark_pelagic, shark_demersal1 ***)     # kg/kg
+#	StomachClearanceRate = "104/year" (Reference needed here ***) ## internally: proportion of stomach capacity / time
+#	AreaSearchRate = "3*km*km/day" (Reference needed here ***) ## 
+#	stomach_capacity = 1.0	(Beth Fulton)	# gut capacity as a proportion of mass
+#	StarvesProportion = 0.4	(Reference needed here ***)
+
+##	PipPredationRadius = "sqrt(12*km/day)/pi"
+##	MaintenanceRate = "(0.1 * stomach_level + 0.05) / week"	(Reference needed here ***) # internally: kg/s per kilo of individual
+##	MaxGrowthRate = "0.12 / week"	(Reference needed here ***)	# internally: kg/time
+##	AssimEfficiency = "0.62"	(Reference needed here ***)     # kg/kg
+##	StomachClearanceRate = "(0.5 * (1 - stomach_level) + 0.2) /day" (Reference needed here ***) ## internally: proportion of stomach capacity / time
+
+##	growth {
+##		male {
+##			linf = 280[cm]	(Reference needed here ***)	# (0.8) males
+##			length_lambda = 0.165[1/year]	(Reference needed here ***)	# specified for years for eqn [age = -log((M-m)/M)/lambda]
+##			age_at_length0 = -1.496[year]	(Reference needed here ***)
+##		#	length_a = 1.312e-8	(Reference needed here ***)
+##			length_a = 5745	(Reference needed here ***)
+##			length_b = 3.0841	(Reference needed here ***)
+##			max_mass = 240[kg]	(Reference needed here ***)
+##		}
+##
+##		female {
+##			linf = 280[cm]	(Reference needed here ***)	# (0.8) females
+##			length_lambda = 0.235[1/year]	(Reference needed here ***)	# specified for years for eqn [age = -log((M-m)/M)/lambda]
+##			age_at_length0 = -1.570[year]	(Reference needed here ***)
+##			length_a = 5745	(Reference needed here ***)
+##			length_b = 3.0841	(Reference needed here ***)
+##			max_mass = 240[kg]	(Reference needed here ***)
+##		}
+##	}
+
+}
+
+movement {
+	# These speeds are for an individual - speeds are adjusted
+	# automatically for school size/population size using the
+	# group_speed_derate_rate parameter
+	period = 4[mins] (bollocks)
+	speed = 0.5[m/s]	(Reference needed here ***)
+	max_speed = 4.0[m/s]	(Reference needed here ***)
+	perception_range = 7	(Reference needed here ***)	# times the speed times the dt
+	#trophic_awareness_radius = 8[km]	(Reference needed here ***)
+	trophic_awareness_radius = 2[km]	(Reference needed here ***)
+
+	min_depth = -0.1[m]	(Reference needed here ***)	# in metres
+	best_depth = -50.0[m]	(Reference needed here ***)	# in metres
+#	max_depth = -60.0[m]  # in metres
+	max_depth = -200[m]	(Reference needed here ***)
+	#max_depth = -550.0[m]	(Reference needed here ***)	# in metres
+
+	speed_variability = 0.07	(Reference needed here ***)
+	#directional_variability = 0.8	(Reference needed here ***)	# was 0.5
+	directional_variability = 0.2	(Reference needed here ***)
+
+	depth_aversion_scale = 0.75	(Reference needed here ***)
+	vertical_variability = 0.1	(estimated from the fluffy bunny)
+
+	group_speed_lambda = -0.5	(Reference needed here ***)
+}
+
+PopNursery {
+	minimum_induction_size = 1	(Reference needed here ***)
+	tick = 2[week]
+	short_tick = 2[week]
+	long_tick = 2[week]
+}
+
+#FishNursery {
+#	minimum_induction_size = 1	(Reference needed here ***)
+#}
+
+Nursery {
+	minimum_induction_size = 1	(Reference needed here ***)
+	radius = 10[km] (assumed)
+	group {
+		size = 100 	(Reference needed here ***)
+	}
+        recruitment {
+                #age = 31622400[sec]	(Reference needed here ***)
+                age = 0.75[year]	(Reference needed here ***)
+                #temporal_radius =  604800[sec]
+                temporal_radius =  1[week]
+        }
+	mortality {
+		natural_mortality = 0.4[@ln(1-x)/year]	(Reference needed here ***)	# mortality rate per year
+	type = "exponential" (Randall's)
+	} 	
+}
+
+Population {
+	radius = 5[km]	(Tuned to suit model resolution)
+	age_classes = 20
+	age_period = 2[year]
+	#sub_classes = 26
+	sub_classes = 1
+
+	movement {
+		min_sea_depth = -10[m]	(Reference needed here ***)
+		max_sea_depth = -9999[m]	(Reference needed here ***)
+	}
+}
+
+BasicPop {
+#	natural_mortality = 	-0.00027329138776969277	(Reference needed here ***)	# mortality rate per year 
+#	age_classes = 65
+#	age_period = 1[year]
+#	sub_classes = 4
+	group {
+		size = 3	(Reference needed here ***)
+	}
+}
+
+BufPredPop ~shark,DIAggBPop #makes BufPredPop and DIAggBPopM  aliases for DIAggBPop
+DIAggBPopM ~shark,DIAggBPop
+
+DIAggBPop {
+	tick = ~Tickfile,PopTicks,shark  # added by Randall to concentrate the ticks in one place for easy fiddling
+												# leaves can be symlinked as well as blocks
+	init {                            
+		# uniformly distribute initial mass
+		male = "1"	(Reference needed here ***)
+		female = "1.1"	(Reference needed here ***)
+		distribute = "mass"
+	}
+	breeding {
+		offset = 12[week]	(Reference needed here ***)
+		class = "Population"
+		#class = "Nursery"
+		bhpoptest {
+			class = "DIAggBPopM"
+		}
+		age = 676[week] 	(Reference needed here ***)
+		#taxon = "invalid_taxon"
+	}
+	fecundity {
+		fecundity = "fecundity"	(Reference needed here ***)	# straight Beverton Holt
+		
+		MaxPropMassSpawned = 0.2
+
+	}
+	BH {
+		BHa = 3e2	(Reference needed here ***)
+		BHb = 5e+02	(Reference needed here ***)
+
+#		BHa = 2.5e+05	(Reference needed here ***)	# default values
+#		BHb = 1.4e2	(Reference needed here ***)
+#
+#		BHa = 3e3	(Reference needed here ***)
+#		BHb = 5e+03	(Reference needed here ***)
+
+		low {
+			BHb = 1e4	(Reference needed here ***)
+		}
+		medium {
+			BHb = 5e3	(Reference needed here ***)
+		}
+		high {
+			BHb = 1e3	(Reference needed here ***)
+		}
+	}
+}
+
+
+FastAssessPredator {
+	disable = 1
+	disable_predation {
+		disable = 1
+	}
+	fast_predation {
+		disable = 0
+	}
+	default_handling_time = 60[s/kg]
+	hunger_threshold = 0.45
+	likes {
+		dugong {
+			dugong = 0.92
+			munch_ratio = 0.3
+			efficiency = 0.95
+		}
+		fish {
+			fish = 0.9
+			munch_ratio = 0.3
+			efficiency = 0.95
+		}
+		prawn {
+			prawn = 0.8
+			munch_ratio = 0.08
+			efficiency = 0.95
+			handling_time = 50[s/kg]
+		}
+		bananaprawn {
+			bananaprawn = 0.85
+			munch_ratio = 0.08
+			efficiency = 0.95
+			attack = 0.1
+		}
+		kingprawn {
+			kingprawn = 0.89
+			munch_ratio = 0.08
+			efficiency = 0.97
+		}
+	}
+}
+
+Predator {
+	disable = 0
+	disable_predation {
+		disable = 1
+	}
+	fast_predation {
+		disable = 1
+	}
+	priority = "safe?log(-1):(full_stomach?0:hunger)"
+	default_handling_time = 60[s/kg]
+	prefers {
+		dugong {
+			prefers = "0.92*attractiveness"
+			munch_ratio = 0.3 # one at a time
+			efficiency = 0.95
+		}
+		shark {
+			prefers = "log(-1)"
+		}
+		fish {
+			prefers = "safe?log(-1):0.9*attractiveness"
+			munch_ratio = 0.3 # one at a time
+			efficiency = 0.95
+		}
+		prawn {
+			prefers = "safe?log(-1):0.8*attractiveness"
+			munch_ratio = 0.08
+			efficiency = 0.95
+			handling_time = 50[s/kg]
+		}
+		bananaprawn {
+			prefers = "safe?log(-1):0.85*attractiveness"
+			munch_ratio = 0.08 # combination of bite size as a proportion of stomach size and density of food
+			efficiency = 0.95
+			attack = 0.1 # chance of attack success
+		}
+		kingprawn {
+			prefers = "safe?log(-1):0.89*attractiveness"
+			munch_ratio = 0.08
+			efficiency = 0.97
+		}
+	}
+}
+
+Prey {
+	disable_predation {
+		disable = 1
+	}
+	priority = "scariness"
+	flight_range = 1.0[m] # this will be moved into a const block
+	fears {
+		#shark was bigshark
+		#shark = "safe?-1:0.9*scariness"
+		dolphin = "safe?-1:0.9*scariness"
+	}
+}
+
+AssessAPip { 
+# implements predation on populations
+	variables {
+		attractiveness = "hunger*safe"
+		block1 {
+			hunger = "1.0-stomach_contents/stomach_capacity"
+			safe = "(urnd()>0.5)?1:0"
+			meanmass = "3.0"
+		}
+		distance_to_pop = "distance < radius ? 0 : (distance-radius)"
+#		atk_bio = "6/day * density * 0.4 * dt/(1 + 6/day * 80 * sec) * meanmass"
+		atk_bio = "6/day * density * dt/(1 + 6/day * 80 * sec) * meanmass"
+	}
+	likes {
+#		lsebae = "1/(distance+1) * density * attractiveness"
+		lsebae { 
+# mode2 assessment style
+			lsebae = "1/(distance_to_pop+1) * density * attractiveness"
+			# attack_success is a test and may not be meaningful
+			attack_success = 1
+			attack_biomass = "Holling1(biomass,assimilation_efficiency,clearance_rate,growth_rate)"
+		}
+		lutjanus { 
+# mode2 assessment style
+			lutjanus = "1/(distance_to_pop+1) * density * attractiveness"
+			# attack_success is a test and may not be meaningful
+			attack_success = 1
+			attack_biomass = "HollingN(biomass, assimilation_efficiency, clearance_rate, growth_rate, holling_power)"
+		}
+		saurid { 
+# mode2 assessment style
+			saurid = "1 /(distance_to_pop+1) * density * attractiveness"
+			# attack_success is a test and may not be meaningful
+			attack_success = 1
+			attack_biomass = "RatDepEat( biomass, predB, clearance_rate, growth_rate, predA)"
+		}
+	}
+
+}

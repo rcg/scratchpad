@@ -1,0 +1,30 @@
+This body of code is indicative of my coding in C/C++. I am not
+particularly wedded to any given paradigm (object-oriented,
+functional, or mathematical). Looking over the code I have written in
+the last dozen years, I find that my "green field" approach is
+predominantly a mix of these three.
+
+Apart from some additional explanatory information at the beginning of
+some files, these are essentially the same as the files used in the
+projects they were written for. A reasonable amount of the contaminant
+code was largely unaltered in the rewrite for the second InVitro
+project, the only major alterations involved the addition of
+serialisation code and thread safety.
+
+I've chosen the contaminant uptake/mortality code from the InVitro
+models because it is non-trivial, reasonably well contained, (still)
+novel, and demonstrates my interest in finding a decent mathematical
+approach rather than to just accept a first order approximation -- in
+this case dealing with the inaccurate estimation of death in a
+population associated with multiple sources of mortality.  While not
+a perfect solution, it was as close as possible with available
+published data.
+
+I have also included a file "animal-methods.scm" which implements the
+behaviour of animals in the model associated with my thesis.  The
+github repository at https://github.com/snarkypenguin/ReModel has more
+of my Scheme code. I was deeply suspicious of the whole lisp family as
+an 18y.o. computer geek ... I rapidly became as devoted to Scheme as I
+was to C.  I now happily use whatever language seems best for the job!
+
+
